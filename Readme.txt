@@ -23,6 +23,9 @@ Key Controls :
     Cursor Down    - Move Plane Backward
     Cursor Left    - Strafe Plane Left
     Cursor Right   - Strafe Plane Right
+    Space - Fire
+    Return - First explosion
+    Q - Second Explosion
     
 Mouse Controls :
     
