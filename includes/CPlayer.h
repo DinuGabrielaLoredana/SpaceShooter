@@ -64,6 +64,8 @@ public:
 	Vec2&					Velocity();
 	bool EnemyHit = false;
 	bool PlayerHit = false;
+	bool col = false;
+
 	bool left;
 	int count = 0;
 	void					Explode();
@@ -72,7 +74,7 @@ public:
 	bool					QAdvanceExplosion();
 
 	bool					AdvanceFire();
-
+	void CollisionDetection();
 	Vec2 *gBulletList;
 private:
 	//-------------------------------------------------------------------------
@@ -97,6 +99,7 @@ private:
 
 	AnimatedSprite*	 m_pEnemyFireSprite;
 	bool m_bEnemyFire;
+	
 };
 
 #endif // _CPLAYER_H_
