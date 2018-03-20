@@ -1,450 +1,307 @@
 //-----------------------------------------------------------------------------
-// File: CGameApp.cpp
+// File: CPlayer.cpp
 //
-// Desc: Game Application class, this is the central hub for all app processing
+// Desc: This file stores the player object class. This class performs tasks
+//       such as player movement, some minor physics as well as rendering.
 //
 // Original design by Adam Hoult & Gary Simmons. Modified by Mihai Popescu.
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
-// CGameApp Specific Includes
+// CPlayer Specific Includes
 //-----------------------------------------------------------------------------
-#include "CGameApp.h"
-extern HINSTANCE g_hInst;
+#include "CPlayer.h"
 
 //-----------------------------------------------------------------------------
-// CGameApp Member Functions
+// Name : CPlayer () (Constructor)
+// Desc : CPlayer Class Constructor
 //-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-// Name : CGameApp () (Constructor)
-// Desc : CGameApp Class Constructor
-//-----------------------------------------------------------------------------
-CGameApp::CGameApp()
+CPlayer::CPlayer(const BackBuffer *pBackBuffer)
 {
-	// Reset / Clear all required values
-	m_hWnd			= NULL;
-	m_hIcon			= NULL;
-	m_hMenu			= NULL;
-	m_pBBuffer		= NULL;
-	m_pPlayer		= NULL;
-	m_LastFrameRate = 0;
+	//m_pSprite = new Sprite("data/planeimg.bmp", "data/planemask.bmp");
+	m_pSprite = new Sprite("data/planeimgandmask.bmp", RGB(0xff,0x00, 0xff));
+	m_pSprite->setBackBuffer( pBackBuffer );
+	m_eSpeedState = SPEED_STOP;
+	m_fTimer = 0;
+
+	// Animation frame crop rectangle
+	RECT r;
+	r.left = 0;
+	r.top = 0;
+	r.right = 128;
+	r.bottom = 128;
+
+	left = 1;
+
+
+	q_pSprite = new Sprite("data/planeimgandmask1.bmp", RGB(0xff, 0x00, 0xff));
+	q_pSprite->setBackBuffer(pBackBuffer);
+	q_pSprite->mPosition.x = 700;
+	q_pSprite->mPosition.y = 100;
+
+
+	m_pExplosionSprite	= new AnimatedSprite("data/explosion.bmp", "data/explosionmask.bmp", r, 16);
+	m_pExplosionSprite->setBackBuffer( pBackBuffer );
+	m_bExplosion		= false;
+	m_iExplosionFrame	= 0;
+	
+	q_pExplosionSprite = new AnimatedSprite("data/ex.bmp", "data/exmask.bmp", r, 16);
+	q_pExplosionSprite->setBackBuffer(pBackBuffer);
+	q_bExplosion = false;
+	q_iExplosionFrame = 0;
+
+
+	m_pFireSprite = new AnimatedSprite("data/red_fire.bmp", "data/red_fire.bmp", r, 1);
+	m_pFireSprite->setBackBuffer(pBackBuffer);
+	m_bFire = false;
+
+
+
+	m_pEnemyFireSprite = new AnimatedSprite("data/red_fire.bmp", "data/red_fire.bmp", r, 1);
+	m_pEnemyFireSprite->setBackBuffer(pBackBuffer);
+	m_bEnemyFire = false;
 }
 
 //-----------------------------------------------------------------------------
-// Name : ~CGameApp () (Destructor)
-// Desc : CGameApp Class Destructor
+// Name : ~CPlayer () (Destructor)
+// Desc : CPlayer Class Destructor
 //-----------------------------------------------------------------------------
-CGameApp::~CGameApp()
+CPlayer::~CPlayer()
 {
-	// Shut the engine down
-	ShutDown();
+	delete m_pSprite;
+	delete q_pSprite;
+	delete m_pExplosionSprite;
+	delete q_pExplosionSprite;
+	
 }
 
-//-----------------------------------------------------------------------------
-// Name : InitInstance ()
-// Desc : Initialises the entire Engine here.
-//-----------------------------------------------------------------------------
-bool CGameApp::InitInstance( LPCTSTR lpCmdLine, int iCmdShow )
+void CPlayer::Update(float dt)
 {
-	// Create the primary display device
-	if (!CreateDisplay()) { ShutDown(); return false; }
+	// Update sprite
+	m_pSprite->update(dt);
+	q_pSprite->update(dt);
 
-	// Build Objects
-	if (!BuildObjects()) 
-	{ 
-		MessageBox( 0, _T("Failed to initialize properly. Reinstalling the application may solve this problem.\nIf the problem persists, please contact technical support."), _T("Fatal Error"), MB_OK | MB_ICONSTOP);
-		ShutDown(); 
-		return false; 
-	}
+	// Get velocity
+	double v = m_pSprite->mVelocity.Magnitude();
 
-	// Set up all required game states
-	SetupGameState();
+	// NOTE: for each async sound played Windows creates a thread for you
+	// but only one, so you cannot play multiple sounds at once.
+	// This creation/destruction of threads also leads to bad performance
+	// so this method is not recommanded to be used in complex projects.
 
-	// Success!
-	return true;
-}
+	// update internal time counter used in sound handling (not to overlap sounds)
+	m_fTimer += dt;
 
-//-----------------------------------------------------------------------------
-// Name : CreateDisplay ()
-// Desc : Create the display windows, devices etc, ready for rendering.
-//-----------------------------------------------------------------------------
-bool CGameApp::CreateDisplay()
-{
-	LPTSTR			WindowTitle		= _T("GameFramework");
-	LPCSTR			WindowClass		= _T("GameFramework_Class");
-	USHORT			Width = 800;
-		USHORT			Height = 600;
-	RECT			rc;
-	WNDCLASSEX		wcex;
-
-
-	wcex.cbSize			= sizeof(WNDCLASSEX);
-	wcex.style			= CS_HREDRAW | CS_VREDRAW;
-	wcex.lpfnWndProc	= CGameApp::StaticWndProc;
-	wcex.cbClsExtra		= 0;
-	wcex.cbWndExtra		= 0;
-	wcex.hInstance		= g_hInst;
-	wcex.hIcon			= LoadIcon(g_hInst, MAKEINTRESOURCE(IDI_ICON));
-	wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
-	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW+1);
-	wcex.lpszMenuName	= 0;
-	wcex.lpszClassName	= WindowClass;
-	wcex.hIconSm		= LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_ICON));
-
-	if(RegisterClassEx(&wcex)==0)
-		return false;
-
-	// Retrieve the final client size of the window
-	::GetClientRect( m_hWnd, &rc );
-	m_nViewX		= rc.left;
-	m_nViewY		= rc.top;
-	m_nViewWidth	= rc.right - rc.left;
-	m_nViewHeight	= rc.bottom - rc.top;
-
-	m_hWnd = CreateWindow(WindowClass, WindowTitle, WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT, Width, Height, NULL, NULL, g_hInst, this);
-
-	if (!m_hWnd)
-		return false;
-	/////////////////////////////////////////////////////////////////////////////////////////
-	// Show the window
-	ShowWindow(m_hWnd, SW_SHOWMAXIMIZED);
-
-	// Success!!
-	return true;
-}
-
-//-----------------------------------------------------------------------------
-// Name : BeginGame ()
-// Desc : Signals the beginning of the physical post-initialisation stage.
-//		From here on, the game engine has control over processing.
-//-----------------------------------------------------------------------------
-int CGameApp::BeginGame()
-{
-	MSG		msg;
-	static UINT			fTimer;
-	// Start main loop
-	while(true) 
+	// A FSM is used for sound manager 
+	switch(m_eSpeedState)
 	{
-		// Did we recieve a message, or are we idling ?
-		if ( PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) ) 
+	case SPEED_STOP:
+		if(v > 35.0f)
 		{
-			if (msg.message == WM_QUIT) break;
-			TranslateMessage( &msg );
-			DispatchMessage ( &msg );
-		} 
-		else 
+			m_eSpeedState = SPEED_START;
+			PlaySound("data/jet-start.wav", NULL, SND_FILENAME | SND_ASYNC);
+			m_fTimer = 0;
+		}
+		break;
+	case SPEED_START:
+		if(v < 25.0f)
 		{
-			// Advance Game Frame.
-			FrameAdvance();
-			m_pPlayer->EnemyFire();
-			if (m_pPlayer->EnemyHit) {
-				fTimer = SetTimer(m_hWnd, 1, 50, NULL);
-				m_pPlayer->Explode();
-				m_pPlayer->EnemyHit = false;
+			m_eSpeedState = SPEED_STOP;
+			PlaySound("data/jet-stop.wav", NULL, SND_FILENAME | SND_ASYNC);
+			m_fTimer = 0;
+		}
+		else
+			if(m_fTimer > 1.f)
+			{
+				PlaySound("data/jet-cabin.wav", NULL, SND_FILENAME | SND_ASYNC);
+				m_fTimer = 0;
 			}
-			if (m_pPlayer->PlayerHit) {
-				fTimer = SetTimer(m_hWnd, 1, 50, NULL);
-				m_pPlayer->QExplode();
-				m_pPlayer->PlayerHit = false;
-			}
-			
-		} // End If messages waiting
-	
-	} // Until quit message is receieved
+		break;
+	}
 
-	return 0;
+	// NOTE: For sound you also can use MIDI but it's Win32 API it is a bit hard
+	// see msdn reference: http://msdn.microsoft.com/en-us/library/ms711640.aspx
+	// In this case you can use a C++ wrapper for it. See the following article:
+	// http://www.codeproject.com/KB/audio-video/midiwrapper.aspx (with code also)
 }
 
-//-----------------------------------------------------------------------------
-// Name : ShutDown ()
-// Desc : Shuts down the game engine, and frees up all resources.
-//-----------------------------------------------------------------------------
-bool CGameApp::ShutDown()
+void CPlayer::Draw()
 {
-	// Release any previously built objects
-	ReleaseObjects ( );
-	
-	// Destroy menu, it may not be attached
-	if ( m_hMenu ) DestroyMenu( m_hMenu );
-	m_hMenu		 = NULL;
+	if (!m_bExplosion && !q_bExplosion)
+	{
+		m_pSprite->draw();
+		q_pSprite->draw();
+	}
+	else
+		if (q_bExplosion)
+		{
+			q_pExplosionSprite->draw();
+			m_pSprite->draw();
+		}
+		else if (m_bExplosion) {
+			m_pExplosionSprite->draw();
+			q_pSprite->draw();
+		}
+	if (m_bFire) {
+		m_pFireSprite->draw();
+	}
+	if (m_bEnemyFire)
+		m_pEnemyFireSprite->draw();
+}
 
-	// Destroy the render window
-	SetMenu( m_hWnd, NULL );
-	if ( m_hWnd ) DestroyWindow( m_hWnd );
-	m_hWnd		  = NULL;
+void CPlayer::Move(ULONG ulDirection)
+{
 	
-	// Shutdown Success
+	Vec2 &constrain = Position();
+	
+	int x_max = GetSystemMetrics(SM_CXSCREEN);
+	int y_max = GetSystemMetrics(SM_CYSCREEN);
+	if (ulDirection & CPlayer::DIR_LEFT && constrain.x > 0 + 100 / 2)
+	{
+		m_pSprite->mVelocity.x -= .5;
+		
+	}
+	else if( ulDirection & CPlayer::DIR_RIGHT && constrain.x <x_max-143/2 )
+		m_pSprite->mVelocity.x += .5;
+	else 
+		m_pSprite->mVelocity.x = 0;
+	
+	if( ulDirection & CPlayer::DIR_FORWARD && constrain.y >0 + 143/2)
+		m_pSprite->mVelocity.y -= .5;
+
+	else if( ulDirection & CPlayer::DIR_BACKWARD  && constrain.y <y_max - 143)
+		m_pSprite->mVelocity.y += .5;
+	else 
+		m_pSprite->mVelocity.y = 0;
+
+	Vec2 &qconstrain = qPosition();
+
+	if (qconstrain.x > 0 + 100 / 2 && left ==1)
+		{
+			q_pSprite->mPosition.x -= 5;
+
+	}
+	
+	else if(qconstrain.x < x_max - 143 / 2){
+		left = 0;
+			q_pSprite->mPosition.x += 5;
+			if (qconstrain.x == x_max - 143 / 2)
+				left = 1;
+	} 
+	
+	
+	if (m_pFireSprite->mPosition.x < x_max && m_pFireSprite->mPosition.x > 0 && m_pFireSprite->mPosition.y > 0 && m_pFireSprite->mPosition.y < y_max) {
+		m_pFireSprite->mPosition.y -= 5;
+	}
+
+	if (m_pEnemyFireSprite->mPosition.x < x_max && m_pEnemyFireSprite->mPosition.x > 0 && m_pEnemyFireSprite->mPosition.y > 0 && m_pEnemyFireSprite->mPosition.y < y_max) {
+		m_pEnemyFireSprite->mPosition.y += 5;
+	}
+	
+}
+void CPlayer::Fire() {
+	m_pFireSprite->mPosition.x = m_pSprite->mPosition.x + 60 ;
+	m_pFireSprite->mPosition.y = m_pSprite->mPosition.y - 50 ;
+	//m_pFireSprite->SetFrame(0);
+	m_bFire = true;
+}
+
+void CPlayer::EnemyFire() {
+	
+	if (count == 100) {
+		m_pEnemyFireSprite->mPosition.x = q_pSprite->mPosition.x + 40;
+		m_pEnemyFireSprite->mPosition.y = q_pSprite->mPosition.y + 150;
+		//m_pFireSprite->SetFrame(0);
+		m_bEnemyFire = true;
+		count = 0;
+	}
+	else count++;
+}
+
+Vec2& CPlayer::qPosition()
+{
+	return q_pSprite->mPosition;
+}
+
+Vec2& CPlayer::Position()
+{
+	return m_pSprite->mPosition;
+}
+
+
+Vec2& CPlayer::Velocity()
+{
+	return m_pSprite->mVelocity;
+}
+
+void CPlayer::Explode()
+{
+	m_pExplosionSprite->mPosition = m_pSprite->mPosition;
+	m_pExplosionSprite->SetFrame(0);
+	PlaySound("data/explosion.wav", NULL, SND_FILENAME | SND_ASYNC);
+	m_bExplosion = true;
+}
+
+
+bool CPlayer::AdvanceExplosion()
+{
+	if(m_bExplosion)
+	{
+		m_pExplosionSprite->SetFrame(m_iExplosionFrame++);
+		if(m_iExplosionFrame==m_pExplosionSprite->GetFrameCount())
+		{
+			m_bExplosion = false;
+			m_iExplosionFrame = 0;
+			m_pSprite->mVelocity = Vec2(0,0);
+			m_eSpeedState = SPEED_STOP;
+			return false;
+		}
+	}
+
 	return true;
 }
 
-//-----------------------------------------------------------------------------
-// Name : StaticWndProc () (Static Callback)
-// Desc : This is the main messge pump for ALL display devices, it captures
-//		the appropriate messages, and routes them through to the application
-//		class for which it was intended, therefore giving full class access.
-// Note : It is VITALLY important that you should pass your 'this' pointer to
-//		the lpParam parameter of the CreateWindow function if you wish to be
-//		able to pass messages back to that app object.
-//-----------------------------------------------------------------------------
-LRESULT CALLBACK CGameApp::StaticWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam)
-{
-	// If this is a create message, trap the 'this' pointer passed in and store it within the window.
-	if ( Message == WM_CREATE ) SetWindowLong( hWnd, GWL_USERDATA, (LONG)((CREATESTRUCT FAR *)lParam)->lpCreateParams);
 
-	// Obtain the correct destination for this message
-	CGameApp *Destination = (CGameApp*)GetWindowLong( hWnd, GWL_USERDATA );
-	
-	// If the hWnd has a related class, pass it through
-	if (Destination) return Destination->DisplayWndProc( hWnd, Message, wParam, lParam );
-	
-	// No destination found, defer to system...
-	return DefWindowProc( hWnd, Message, wParam, lParam );
+void CPlayer::QExplode()
+{
+	q_pExplosionSprite->mPosition = q_pSprite->mPosition;
+	q_pExplosionSprite->SetFrame(0);
+	PlaySound("data/explosion.wav", NULL, SND_FILENAME | SND_ASYNC);
+	q_bExplosion = true;
 }
 
-//-----------------------------------------------------------------------------
-// Name : DisplayWndProc ()
-// Desc : The display devices internal WndProc function. All messages being
-//		passed to this function are relative to the window it owns.
-//-----------------------------------------------------------------------------
-LRESULT CGameApp::DisplayWndProc( HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam )
+bool CPlayer::QAdvanceExplosion()
 {
-	static UINT			fTimer;	
-
-	// Determine message type
-	switch (Message)
+	if (q_bExplosion)
 	{
-		case WM_CREATE:
-			break;
-		
-		case WM_CLOSE:
-			PostQuitMessage(0);
-			break;
-		
-		case WM_DESTROY:
-			PostQuitMessage(0);
-			break;
-		
-		case WM_SIZE:
-			if ( wParam == SIZE_MINIMIZED )
-			{
-				// App is inactive
-				m_bActive = false;
-			
-			} // App has been minimized
-			else
-			{
-				// App is active
-				m_bActive = true;
+		q_pExplosionSprite->SetFrame(q_iExplosionFrame++);
+		if (q_iExplosionFrame == q_pExplosionSprite->GetFrameCount())
+		{
+			q_bExplosion = false;
+			q_iExplosionFrame = 0;
+			q_pSprite->mVelocity = Vec2(0, 0);
+			m_eSpeedState = SPEED_STOP;
+			return false;
+		}
+	}
 
-				// Store new viewport sizes
-				m_nViewWidth  = LOWORD( lParam );
-				m_nViewHeight = HIWORD( lParam );
-		
-			
-			} // End if !Minimized
-
-			break;
-
-		case WM_LBUTTONDOWN:
-			// Capture the mouse
-			SetCapture( m_hWnd );
-			GetCursorPos( &m_OldCursorPos );
-			break;
-
-		case WM_LBUTTONUP:
-			// Release the mouse
-			ReleaseCapture( );
-			break;
-
-		case WM_KEYDOWN:
-			switch (wParam)
-			{
-			case VK_ESCAPE:
-				PostQuitMessage(0);
-				break;
-			case VK_RETURN:
-				fTimer = SetTimer(m_hWnd, 1, 50, NULL);
-				m_pPlayer->Explode();
-				break;
-			case 0x51:
-				fTimer = SetTimer(m_hWnd, 1, 50, NULL);
-				m_pPlayer->QExplode();
-				break;
-
-			case VK_SPACE:
-				m_pPlayer->Fire();
-
-			}
-		
-	
-			break;
-
-		case WM_TIMER:
-			switch(wParam)
-			{
-			case 1:
-				if(!m_pPlayer->AdvanceExplosion()  )
-					KillTimer(m_hWnd, 1);
-				if (!m_pPlayer->QAdvanceExplosion())
-					KillTimer(m_hWnd, 1);
-				
-
-				
-
-
-			}
-			break;
-
-		case WM_COMMAND:
-			break;
-
-		default:
-			return DefWindowProc(hWnd, Message, wParam, lParam);
-
-	} // End Message Switch
-
-}
-
-//-----------------------------------------------------------------------------
-// Name : BuildObjects ()
-// Desc : Build our demonstration meshes, and the objects that instance them
-//-----------------------------------------------------------------------------
-bool CGameApp::BuildObjects()
-{
-	m_pBBuffer = new BackBuffer(m_hWnd, m_nViewWidth, m_nViewHeight);
-	m_pPlayer = new CPlayer(m_pBBuffer);
-	//m_hBMP = (HBITMAP)LoadImage(g_hInst, szFileName, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION | LR_LOADFROMFILE);
-	if(!m_imgBackground.LoadBitmapFromFile("data/background.bmp", GetDC(m_hWnd) ))
-		return false;
-
-	// Success!
 	return true;
 }
 
-//-----------------------------------------------------------------------------
-// Name : SetupGameState ()
-// Desc : Sets up all the initial states required by the game.
-//-----------------------------------------------------------------------------
-void CGameApp::SetupGameState()
-{
-	m_pPlayer->Position() = Vec2(100, 400);
-}
 
-//-----------------------------------------------------------------------------
-// Name : ReleaseObjects ()
-// Desc : Releases our objects and their associated memory so that we can
-//		rebuild them, if required, during our applications life-time.
-//-----------------------------------------------------------------------------
-void CGameApp::ReleaseObjects( )
-{
-	if(m_pPlayer != NULL)
-	{
-		delete m_pPlayer;
-		m_pPlayer = NULL;
-	}
+void CPlayer::CollisionDetection() {
+	if (m_pEnemyFireSprite->mPosition.x < m_pSprite->mPosition.x + 100 && m_pEnemyFireSprite->mPosition.x > m_pSprite->mPosition.x - 30 && m_pEnemyFireSprite->mPosition.y < m_pSprite->mPosition.y + 50 && m_pEnemyFireSprite->mPosition.y > m_pSprite->mPosition.y - 50)
+		EnemyHit = true;
+	if (m_pFireSprite->mPosition.x < q_pSprite->mPosition.x + 70 && m_pFireSprite->mPosition.x > q_pSprite->mPosition.x - 70 && m_pFireSprite->mPosition.y < q_pSprite->mPosition.y + 50 && m_pFireSprite->mPosition.y > q_pSprite->mPosition.y - 50)
+		PlayerHit = true;
+	Vec2 rect1 = m_pSprite->mPosition;
+	Vec2 rect2 = q_pSprite->mPosition;
 
-	if(m_pBBuffer != NULL)
-	{
-		delete m_pBBuffer;
-		m_pBBuffer = NULL;
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Name : FrameAdvance () (Private)
-// Desc : Called to signal that we are now rendering the next frame.
-//-----------------------------------------------------------------------------
-void CGameApp::FrameAdvance()
-{
-	static TCHAR FrameRate[ 50 ];
-	static TCHAR TitleBuffer[ 255 ];
-
-	// Advance the timer
-	m_Timer.Tick( );
-
-	// Skip if app is inactive
-	if ( !m_bActive ) return;
+	int length = rect1.x - rect2.x;
+	int width = rect1.y - rect2.y;
+	int vertical_gap = abs(width) - 140;
+	int horisontal_gap = abs(length) - 100;
+	if (horisontal_gap <= 0 && vertical_gap <= 0 && !col)
+		col = true;
 	
-	// Get / Display the framerate
-	if ( m_LastFrameRate != m_Timer.GetFrameRate() )
-	{
-		m_LastFrameRate = m_Timer.GetFrameRate( FrameRate, 50 );
-		sprintf_s( TitleBuffer, _T("Game : %s"), FrameRate );
-		SetWindowText( m_hWnd, TitleBuffer );
-
-	} // End if Frame Rate Altered
-
-	// Poll & Process input devices
-	ProcessInput();
-
-	// Animate the game objects
-	AnimateObjects();
-
-	// Drawing the game objects
-	DrawObjects();
-}
-
-//-----------------------------------------------------------------------------
-// Name : ProcessInput () (Private)
-// Desc : Simply polls the input devices and performs basic input operations
-//-----------------------------------------------------------------------------
-void CGameApp::ProcessInput( )
-{
-	static UCHAR pKeyBuffer[ 256 ];
-	ULONG		Direction = 0;
-	POINT		CursorPos;
-	float		X = 0.0f, Y = 0.0f;
-
-	// Retrieve keyboard state
-	if ( !GetKeyboardState( pKeyBuffer ) ) return;
-
-	// Check the relevant keys
-	if ( pKeyBuffer[ VK_UP	] & 0xF0 ) Direction |= CPlayer::DIR_FORWARD;
-	if ( pKeyBuffer[ VK_DOWN  ] & 0xF0 ) Direction |= CPlayer::DIR_BACKWARD;
-	if ( pKeyBuffer[ VK_LEFT  ] & 0xF0 ) Direction |= CPlayer::DIR_LEFT;
-	if ( pKeyBuffer[ VK_RIGHT ] & 0xF0 ) Direction |= CPlayer::DIR_RIGHT;
-
-	
-	// Move the player
-	m_pPlayer->Move(Direction);
-
-
-	// Now process the mouse (if the button is pressed)
-	if ( GetCapture() == m_hWnd )
-	{
-		// Hide the mouse pointer
-		SetCursor( NULL );
-
-		// Retrieve the cursor position
-		GetCursorPos( &CursorPos );
-
-		// Reset our cursor position so we can keep going forever :)
-		SetCursorPos( m_OldCursorPos.x, m_OldCursorPos.y );
-
-	} // End if Captured
-}
-
-//-----------------------------------------------------------------------------
-// Name : AnimateObjects () (Private)
-// Desc : Animates the objects we currently have loaded.
-//-----------------------------------------------------------------------------
-void CGameApp::AnimateObjects()
-{
-	m_pPlayer->Update(m_Timer.GetTimeElapsed());
-}
-
-//-----------------------------------------------------------------------------
-// Name : DrawObjects () (Private)
-// Desc : Draws the game objects
-//-----------------------------------------------------------------------------
-void CGameApp::DrawObjects()
-{
-	m_pBBuffer->reset();
-
-	m_imgBackground.Paint(m_pBBuffer->getDC(), 0, 0);
-
-	m_pPlayer->Draw();
-
-	m_pBBuffer->present();
 }
