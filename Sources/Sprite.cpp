@@ -200,6 +200,7 @@ void AnimatedSprite::SetFrame(int iIndex)
 	
 	
 	
+	
 }
 
 void AnimatedSprite::draw()

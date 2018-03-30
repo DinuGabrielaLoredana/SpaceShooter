@@ -31,8 +31,6 @@ CPlayer::CPlayer(const BackBuffer *pBackBuffer)
 	r.right = 128;
 	r.bottom = 128;
 
-	left = 1;
-
 
 	q_pSprite = new Sprite("data/planeimgandmask1.bmp", RGB(0xff, 0x00, 0xff));
 	q_pSprite->setBackBuffer(pBackBuffer);
@@ -40,6 +38,8 @@ CPlayer::CPlayer(const BackBuffer *pBackBuffer)
 	q_pSprite->mPosition.y = 100;
 
 
+
+	q_pSprite->mPosition.y = 100;
 	m_pExplosionSprite	= new AnimatedSprite("data/explosion.bmp", "data/explosionmask.bmp", r, 16);
 	m_pExplosionSprite->setBackBuffer( pBackBuffer );
 	m_bExplosion		= false;
@@ -51,15 +51,25 @@ CPlayer::CPlayer(const BackBuffer *pBackBuffer)
 	q_iExplosionFrame = 0;
 
 
-	m_pFireSprite = new AnimatedSprite("data/red_fire.bmp", "data/red_fire.bmp", r, 1);
+	m_pFireSprite = new AnimatedSprite("data/purple_fire.bmp", "data/purple_fire.bmp", r, 1);
 	m_pFireSprite->setBackBuffer(pBackBuffer);
 	m_bFire = false;
 
-
-
-	m_pEnemyFireSprite = new AnimatedSprite("data/red_fire.bmp", "data/red_fire.bmp", r, 1);
+	m_pEnemyFireSprite = new AnimatedSprite("data/green_fire.bmp", "data/green_fire.bmp", r, 1);
 	m_pEnemyFireSprite->setBackBuffer(pBackBuffer);
 	m_bEnemyFire = false;
+
+
+
+	RECT livesRect;
+	livesRect.left = -50;
+	livesRect.top = 0;
+	livesRect.right = 110;
+	livesRect.bottom = 50;
+	
+	
+
+
 }
 
 //-----------------------------------------------------------------------------
@@ -127,10 +137,9 @@ void CPlayer::Update(float dt)
 
 void CPlayer::Draw()
 {
-	if (!m_bExplosion && !q_bExplosion)
-	{
-		m_pSprite->draw();
-		q_pSprite->draw();
+	if (!m_bExplosion && !q_bExplosion) {
+			m_pSprite->draw();
+			q_pSprite->draw();
 	}
 	else
 		if (q_bExplosion)
@@ -147,7 +156,11 @@ void CPlayer::Draw()
 	}
 	if (m_bEnemyFire)
 		m_pEnemyFireSprite->draw();
+	
+	
+
 }
+
 
 void CPlayer::Move(ULONG ulDirection)
 {
@@ -161,8 +174,11 @@ void CPlayer::Move(ULONG ulDirection)
 		m_pSprite->mVelocity.x -= .5;
 		
 	}
-	else if( ulDirection & CPlayer::DIR_RIGHT && constrain.x <x_max-143/2 )
+	else if (ulDirection & CPlayer::DIR_RIGHT && constrain.x < x_max - 143 / 2)
+	{
 		m_pSprite->mVelocity.x += .5;
+
+	}
 	else 
 		m_pSprite->mVelocity.x = 0;
 	
@@ -174,37 +190,81 @@ void CPlayer::Move(ULONG ulDirection)
 	else 
 		m_pSprite->mVelocity.y = 0;
 
-	Vec2 &qconstrain = qPosition();
+	Vec2 &enemyConstrain = enemyPosition();
 
-	if (qconstrain.x > 0 + 100 / 2 && left ==1)
+	if (enemyConstrain.x > 0 + 100 / 2 && left ==1)
 		{
 			q_pSprite->mPosition.x -= 5;
 
 	}
 	
-	else if(qconstrain.x < x_max - 143 / 2){
+	else if(enemyConstrain.x < x_max - 143 / 2){
 		left = 0;
 			q_pSprite->mPosition.x += 5;
-			if (qconstrain.x == x_max - 143 / 2)
+			if (enemyConstrain.x == x_max - 143 / 2)
 				left = 1;
 	} 
 	
-	
-	if (m_pFireSprite->mPosition.x < x_max && m_pFireSprite->mPosition.x > 0 && m_pFireSprite->mPosition.y > 0 && m_pFireSprite->mPosition.y < y_max) {
-		m_pFireSprite->mPosition.y -= 5;
+	//trage in sus
+	if (u)
+		if (m_pFireSprite->mPosition.y > 0) {
+			m_pFireSprite->mPosition.y -= 5;
+		}
+	//trage in dreapta
+	if (r) {
+		
+		if (m_pFireSprite->mPosition.x < x_max + 300) {
+			m_pFireSprite->mPosition.x += 5;
+		}
+		
 	}
+	//trage in jos
+	if (d) {
+		if (m_pFireSprite->mPosition.y < y_max + 100) {
+			m_pFireSprite->mPosition.y += 5;
+		}
+	}
+	//trage in stanga
+	if (l)
+		if (m_pFireSprite->mPosition.x > 0) {
+			m_pFireSprite->mPosition.x -= 5;
+		}
 
-	if (m_pEnemyFireSprite->mPosition.x < x_max && m_pEnemyFireSprite->mPosition.x > 0 && m_pEnemyFireSprite->mPosition.y > 0 && m_pEnemyFireSprite->mPosition.y < y_max) {
+
+
+
+	if ( m_pEnemyFireSprite->mPosition.y < y_max) {
 		m_pEnemyFireSprite->mPosition.y += 5;
 	}
-	if (m_pEnemyFireSprite->mPosition.x < m_pSprite->mPosition.x+100  && m_pEnemyFireSprite->mPosition.x > m_pSprite->mPosition.x - 30 && m_pEnemyFireSprite->mPosition.y < m_pSprite->mPosition.y+50 &&  m_pEnemyFireSprite->mPosition.y > m_pSprite->mPosition.y -50)
-		EnemyHit = true;
-	if (m_pFireSprite->mPosition.x < q_pSprite->mPosition.x + 70 && m_pFireSprite->mPosition.x > q_pSprite->mPosition.x - 70 && m_pFireSprite->mPosition.y < q_pSprite->mPosition.y + 50 && m_pFireSprite->mPosition.y > q_pSprite->mPosition.y - 50)
-		PlayerHit = true;
+	
 }
 void CPlayer::Fire() {
-	m_pFireSprite->mPosition.x = m_pSprite->mPosition.x + 60 ;
-	m_pFireSprite->mPosition.y = m_pSprite->mPosition.y - 50 ;
+	
+
+	if (rotationDirection ==1) {
+		u = 1;
+		l = d = r = 0;
+		m_pFireSprite->mPosition.x = m_pSprite->mPosition.x + 60;
+		m_pFireSprite->mPosition.y = m_pSprite->mPosition.y - 50;
+	}
+	else if (rotationDirection ==4) {
+		l = 1;
+		u = d = r = 0;
+		m_pFireSprite->mPosition.x = m_pSprite->mPosition.x ;
+		m_pFireSprite->mPosition.y = m_pSprite->mPosition.y + 60;
+	}
+	else if (rotationDirection ==3) {
+		d = 1;
+		l = u = r = 0;
+		m_pFireSprite->mPosition.x = m_pSprite->mPosition.x + 60;
+		m_pFireSprite->mPosition.y = m_pSprite->mPosition.y + 100;
+	}
+	else if (rotationDirection == 2) {
+		r = 1;
+		l = d = u= 0;
+		m_pFireSprite->mPosition.x = m_pSprite->mPosition.x + 130;
+		m_pFireSprite->mPosition.y = m_pSprite->mPosition.y + 60;
+	}
 	//m_pFireSprite->SetFrame(0);
 	m_bFire = true;
 }
@@ -221,7 +281,7 @@ void CPlayer::EnemyFire() {
 	else count++;
 }
 
-Vec2& CPlayer::qPosition()
+Vec2& CPlayer::enemyPosition()
 {
 	return q_pSprite->mPosition;
 }
@@ -260,8 +320,8 @@ bool CPlayer::AdvanceExplosion()
 			return false;
 		}
 	}
-
 	return true;
+	
 }
 
 
@@ -292,3 +352,31 @@ bool CPlayer::QAdvanceExplosion()
 }
 
 
+
+
+
+void CPlayer::CollisionDetection() {
+	
+	Vec2 rect1 = m_pSprite->mPosition;
+	Vec2 rect2 = q_pSprite->mPosition;
+	int length = rect1.x - rect2.x;
+	int width = rect1.y - rect2.y;
+	int vertical_gap = abs(width) - 140;
+	int horisontal_gap = abs(length) - 100;
+	if (horisontal_gap <= 0 && vertical_gap <= 0 && !col)
+		col = true;
+
+	if (m_pEnemyFireSprite->mPosition.x < m_pSprite->mPosition.x + 100 && m_pEnemyFireSprite->mPosition.x > m_pSprite->mPosition.x - 30 && m_pEnemyFireSprite->mPosition.y < m_pSprite->mPosition.y + 50 && m_pEnemyFireSprite->mPosition.y > m_pSprite->mPosition.y - 50)
+	{
+		EnemyHit = true;
+		Explode();
+
+	}
+	if (m_pFireSprite->mPosition.x < q_pSprite->mPosition.x + 100 && m_pFireSprite->mPosition.x > q_pSprite->mPosition.x - 30 && m_pFireSprite->mPosition.y < q_pSprite->mPosition.y + 50 && m_pFireSprite->mPosition.y > q_pSprite->mPosition.y - 50)
+	{
+		PlayerHit = true;
+		QExplode();
+		
+	}
+	
+}

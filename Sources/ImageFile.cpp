@@ -88,7 +88,12 @@ void CImageFile::Reload(HDC hdc)
 {
 	LoadBitmapFromFile(m_szFileName, hdc);
 }
-
+/*	struct TextObj
+	{
+		int score; // The string.
+		POINT p; // String position, relative to the client area rect.
+	};
+	TextObj to;*/
 void CImageFile::Paint(HDC hdc, int x, int y)
 {
 	if(!m_pRGB)
@@ -98,7 +103,7 @@ void CImageFile::Paint(HDC hdc, int x, int y)
 		m_hBMP = CreateCompatibleBitmap(hdc, width, height);
 
 	HDC mdc = CreateCompatibleDC(hdc);
-
+	
 	SelectObject(mdc, m_hBMP);
 
 	SetDIBits(mdc, m_hBMP, 0, height, m_pRGB, (BITMAPINFO*)&m_biInfo, DIB_RGB_COLORS);
