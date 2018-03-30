@@ -26,6 +26,7 @@ Key Controls :
     Space - Fire
     Return - First explosion
     Q - Second Explosion
+    R - Rotate
     
 Mouse Controls :
     
