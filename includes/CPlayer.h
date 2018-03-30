@@ -14,10 +14,13 @@
 // CPlayer Specific Includes
 //-----------------------------------------------------------------------------
 #include "Main.h"
+#include"BackBuffer.h"
 #include "Vec2.h"
 #include "Sprite.h"
 #include"windows.h"
 #include <algorithm>
+#include <math.h>
+
 //-----------------------------------------------------------------------------
 // Main Class Definitions
 //-----------------------------------------------------------------------------
@@ -60,14 +63,25 @@ public:
 	void					Fire();
 	void					EnemyFire();
 	Vec2&					Position();
-	Vec2&					qPosition();
+	Vec2&					enemyPosition();
 	Vec2&					Velocity();
+	Vec2 gGunDir;
+	BackBuffer*				sm_pBBuffer;
+	
+	AnimatedSprite*	 m_pPlayerLivesSprite;
+	int						m_iPlayerLifeFrame = 0;
+
+	AnimatedSprite*	 m_pEnemyLivesSprite;
+	int						m_iEnemyLifeFrame = 0;
+
+	int rotationDirection = 1;
 	bool EnemyHit = false;
 	bool PlayerHit = false;
 	bool col = false;
-
 	bool left;
 	int count = 0;
+	bool  d = 0; bool l = 0;bool  r = 0;
+	bool u = 0;
 	void					Explode();
 	bool					AdvanceExplosion();
 	void					QExplode();
@@ -76,12 +90,18 @@ public:
 	bool					AdvanceFire();
 	void CollisionDetection();
 	Vec2 *gBulletList;
+	Sprite*					m_pSprite;
+	Sprite*					aux;
+	Sprite*					q_pSprite;
+	AnimatedSprite*	 m_pFireSprite;
+	AnimatedSprite*	 m_pEnemyFireSprite;
 private:
 	//-------------------------------------------------------------------------
 	// Private Variables for This Class.
 	//-------------------------------------------------------------------------
-	Sprite*					m_pSprite;
-	Sprite*					q_pSprite;
+	
+	
+	
 	ESpeedStates			m_eSpeedState;
 	float					m_fTimer;
 	
@@ -94,11 +114,12 @@ private:
 	int						q_iExplosionFrame;
 
 
-	AnimatedSprite*	 m_pFireSprite;
+
 	bool m_bFire ;
 
-	AnimatedSprite*	 m_pEnemyFireSprite;
+	
 	bool m_bEnemyFire;
+
 	
 };
 

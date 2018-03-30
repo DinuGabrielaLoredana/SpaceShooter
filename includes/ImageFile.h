@@ -35,7 +35,7 @@ protected:
 public:
 	CImageFile(void);
 	virtual ~CImageFile(void);
-
+	
 	bool LoadBitmapFromFile(const char* szFileName, HDC hdc);
 	virtual void Paint(HDC hdc, int x, int y);
 

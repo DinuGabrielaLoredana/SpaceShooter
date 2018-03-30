@@ -13,11 +13,15 @@
 // CGameApp Specific Includes
 //-----------------------------------------------------------------------------
 #include "Main.h"
+#include<iostream>
 #include "CTimer.h"
 #include "CPlayer.h"
 #include "BackBuffer.h"
 #include "ImageFile.h"
 #include "windows.h"
+
+using namespace std;
+
 
 //-----------------------------------------------------------------------------
 // Forward Declarations
@@ -33,6 +37,7 @@
 class CGameApp
 {
 public:
+	
 	//-------------------------------------------------------------------------
 	// Constructors & Destructors for This Class.
 	//-------------------------------------------------------------------------
@@ -46,8 +51,10 @@ public:
 	bool		InitInstance( LPCTSTR lpCmdLine, int iCmdShow );
 	int		 BeginGame( );
 	bool		ShutDown( );
+
 	
 private:
+	
 	//-------------------------------------------------------------------------
 	// Private Functions for This Class
 	//-------------------------------------------------------------------------
@@ -90,6 +97,7 @@ private:
 
 	BackBuffer*				m_pBBuffer;
 	CPlayer*				m_pPlayer;
+	CPlayer*				m_pPlayer2;
 };
 
 #endif // _CGAMEAPP_H_

@@ -29,8 +29,10 @@ public:
 	// modified externally frequently.
 	Vec2 mPosition;
 	Vec2 mVelocity;
-
-
+	
+	
+	float rotation;
+	
 
 	Vec2 qPosition;
 	Vec2 qVelocity;
@@ -69,6 +71,7 @@ public:
 
 public:
 	void SetFrame(int iIndex);
+	
 	int GetFrameCount() { return miFrameCount; }
 
 	virtual void draw();
