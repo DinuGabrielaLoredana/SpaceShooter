@@ -14,6 +14,7 @@
 //-----------------------------------------------------------------------------
 #include "Main.h"
 #include<iostream>
+#include <fstream>
 #include "CTimer.h"
 #include "CPlayer.h"
 #include "BackBuffer.h"
@@ -51,6 +52,8 @@ public:
 	bool		InitInstance( LPCTSTR lpCmdLine, int iCmdShow );
 	int		 BeginGame( );
 	bool		ShutDown( );
+	void LoadGame();
+	void SaveGame();
 
 	
 private:
@@ -94,10 +97,13 @@ private:
 	HINSTANCE				m_hInstance;
 
 	CImageFile				m_imgBackground;
+	CImageFile				m_imgBackground1;
+
+
 
 	BackBuffer*				m_pBBuffer;
 	CPlayer*				m_pPlayer;
-	CPlayer*				m_pPlayer2;
+
 };
 
 #endif // _CGAMEAPP_H_
