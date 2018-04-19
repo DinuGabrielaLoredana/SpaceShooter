@@ -31,11 +31,14 @@ CPlayer::CPlayer(const BackBuffer *pBackBuffer)
 	r.right = 128;
 	r.bottom = 128;
 
-
+	gameOver1= new Sprite("data/GameOver1.bmp", RGB(0xff, 0x00, 0xff));
+	gameOver1->setBackBuffer(pBackBuffer);
+	gameOver2 = new Sprite("data/GameOver2.bmp", RGB(0xff, 0x00, 0xff));
+	gameOver2->setBackBuffer(pBackBuffer);
 	q_pSprite = new Sprite("data/planeimgandmask1.bmp", RGB(0xff, 0x00, 0xff));
 	q_pSprite->setBackBuffer(pBackBuffer);
-	q_pSprite->mPosition.x = 700;
-	q_pSprite->mPosition.y = 100;
+
+	
 
 
 
@@ -137,27 +140,32 @@ void CPlayer::Update(float dt)
 
 void CPlayer::Draw()
 {
-	if (!m_bExplosion && !q_bExplosion) {
+	if (!gameOver) {
+		if (!m_bExplosion && !q_bExplosion) {
 			m_pSprite->draw();
 			q_pSprite->draw();
-	}
-	else
-		if (q_bExplosion)
-		{
-			q_pExplosionSprite->draw();
-			m_pSprite->draw();
 		}
-		else if (m_bExplosion) {
-			m_pExplosionSprite->draw();
-			q_pSprite->draw();
-		}
-	if (m_bFire) {
-		m_pFireSprite->draw();
+		else
+			if (q_bExplosion)
+			{
+				q_pExplosionSprite->draw();
+				m_pSprite->draw();
+			}
+			else if (m_bExplosion) {
+				m_pExplosionSprite->draw();
+				q_pSprite->draw();
+			}
+			if (m_bFire) {
+				m_pFireSprite->draw();
+			}
+			if (m_bEnemyFire)
+				m_pEnemyFireSprite->draw();
+
 	}
-	if (m_bEnemyFire)
-		m_pEnemyFireSprite->draw();
-	
-	
+	else if (lives == 0)
+		gameOver1->draw();
+	else if(points == 0)
+		gameOver2->draw();
 
 }
 
@@ -189,9 +197,7 @@ void CPlayer::Move(ULONG ulDirection)
 		m_pSprite->mVelocity.y += .5;
 	else 
 		m_pSprite->mVelocity.y = 0;
-
-	Vec2 &enemyConstrain = enemyPosition();
-
+	/* AI enemy movement for CGWeek3
 	if (enemyConstrain.x > 0 + 100 / 2 && left ==1)
 		{
 			q_pSprite->mPosition.x -= 5;
@@ -204,7 +210,7 @@ void CPlayer::Move(ULONG ulDirection)
 			if (enemyConstrain.x == x_max - 143 / 2)
 				left = 1;
 	} 
-	
+	*/
 	//trage in sus
 	if (u)
 		if (m_pFireSprite->mPosition.y > 0) {
@@ -230,16 +236,62 @@ void CPlayer::Move(ULONG ulDirection)
 			m_pFireSprite->mPosition.x -= 5;
 		}
 
-
-
-
-	if ( m_pEnemyFireSprite->mPosition.y < y_max) {
-		m_pEnemyFireSprite->mPosition.y += 5;
-	}
+	
 	
 }
-void CPlayer::Fire() {
+void CPlayer::MoveEnemy(ULONG ulDirection) {
+	int x_max = GetSystemMetrics(SM_CXSCREEN);
+	int y_max = GetSystemMetrics(SM_CYSCREEN);
+	Vec2 &enemyConstrain = enemyPosition();
+	if (ulDirection & CPlayer::DIR_A && enemyConstrain.x > 0 + 100 / 2)
+	{
+		q_pSprite->mVelocity.x -= .5;
+
+	}
+	else if (ulDirection & CPlayer::DIR_D && enemyConstrain.x < x_max - 143 / 2)
+	{
+		q_pSprite->mVelocity.x += .5;
+
+	}
+	else
+		q_pSprite->mVelocity.x = 0;
+
+	if (ulDirection & CPlayer::DIR_W && enemyConstrain.y >0 + 143 / 2)
+		q_pSprite->mVelocity.y -= .5;
+
+	else if (ulDirection & CPlayer::DIR_S  && enemyConstrain.y <y_max - 143)
+		q_pSprite->mVelocity.y += .5;
+	else
+		q_pSprite->mVelocity.y = 0;
+
+
 	
+	if (u1)
+		if (m_pEnemyFireSprite->mPosition.y > 0) {
+			m_pEnemyFireSprite->mPosition.y -= 5;
+		}
+	//trage in dreapta
+	if (r1) {
+
+		if (m_pEnemyFireSprite->mPosition.x < x_max + 300) {
+			m_pEnemyFireSprite->mPosition.x += 5;
+		}
+
+	}
+	//trage in jos
+	if (d1) {
+		if (m_pEnemyFireSprite->mPosition.y < y_max + 100) {
+			m_pEnemyFireSprite->mPosition.y += 5;
+		}
+	}
+	//trage in stanga
+	if (l1)
+		if (m_pEnemyFireSprite->mPosition.x > 0) {
+			m_pEnemyFireSprite->mPosition.x -= 5;
+		}
+}
+void CPlayer::Fire() {
+
 
 	if (rotationDirection ==1) {
 		u = 1;
@@ -256,7 +308,7 @@ void CPlayer::Fire() {
 	else if (rotationDirection ==3) {
 		d = 1;
 		l = u = r = 0;
-		m_pFireSprite->mPosition.x = m_pSprite->mPosition.x + 60;
+		m_pFireSprite->mPosition.x = m_pSprite->mPosition.x + 90;
 		m_pFireSprite->mPosition.y = m_pSprite->mPosition.y + 100;
 	}
 	else if (rotationDirection == 2) {
@@ -271,14 +323,34 @@ void CPlayer::Fire() {
 
 void CPlayer::EnemyFire() {
 	
-	if (count == 100) {
+	if (enemyRotation == 1) {
+		u1 = 1;
+		l1 = d1 = r1 = 0;
+		m_pEnemyFireSprite->mPosition.x = q_pSprite->mPosition.x + 60;
+		m_pEnemyFireSprite->mPosition.y = q_pSprite->mPosition.y - 50;
+	}
+	else if (enemyRotation == 2) {
+		r1 = 1;
+		l1 = d1 = u1 = 0;
+		m_pEnemyFireSprite->mPosition.x = q_pSprite->mPosition.x + 130;
+		m_pEnemyFireSprite->mPosition.y = q_pSprite->mPosition.y + 60;
+	}
+	else if (enemyRotation == 3) {
+		d1 = 1;
+		l1 = u1 = r1 = 0;
 		m_pEnemyFireSprite->mPosition.x = q_pSprite->mPosition.x + 40;
 		m_pEnemyFireSprite->mPosition.y = q_pSprite->mPosition.y + 150;
+	}
+	else if (enemyRotation == 4) {
+		l1 = 1;
+		u1 = d1 = r1 = 0;
+		m_pEnemyFireSprite->mPosition.x = q_pSprite->mPosition.x;
+		m_pEnemyFireSprite->mPosition.y = q_pSprite->mPosition.y + 60;
+	}
+	
 		//m_pFireSprite->SetFrame(0);
 		m_bEnemyFire = true;
-		count = 0;
-	}
-	else count++;
+		
 }
 
 Vec2& CPlayer::enemyPosition()
