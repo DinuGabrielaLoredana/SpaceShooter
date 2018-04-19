@@ -5,15 +5,20 @@
 //
 // Original design by Adam Hoult & Gary Simmons. Modified by Mihai Popescu.
 //-----------------------------------------------------------------------------
+#include <iostream>
+#include <fstream>
+using namespace std; 
+int y_bg1 = -1;
+int y_bg2 =-800 ;
 
+double readable;
 //-----------------------------------------------------------------------------
 // CGameApp Specific Includes
 //-----------------------------------------------------------------------------
 #include "CGameApp.h"
 extern HINSTANCE g_hInst;
 // Globals.
-int lives = 3;
-int points = 0;
+
 char life[100] = "";
 char score[100] = "";
 //-----------------------------------------------------------------------------
@@ -77,7 +82,7 @@ bool CGameApp::CreateDisplay()
 	LPTSTR			WindowTitle		= _T("GameFramework");
 	LPCSTR			WindowClass		= _T("GameFramework_Class");
 	USHORT			Width = 800;
-	USHORT			Height = 600;
+	USHORT			Height = 1600;
 	RECT			rc;
 	WNDCLASSEX		wcex;
 
@@ -141,17 +146,24 @@ int CGameApp::BeginGame()
 		{
 			// Advance Game Frame.
 			FrameAdvance();
-			
-			m_pPlayer->EnemyFire();
+			y_bg1++;
+			y_bg2++;
+			if (y_bg2 == 0) {
+				y_bg1 = -800;
+			}
+			if (y_bg1 == 0) {
+				y_bg2 = -800;
+			}
+
 			m_pPlayer->CollisionDetection();
 			if (m_pPlayer->EnemyHit ) {
 				if (!(m_pPlayer->m_pEnemyFireSprite->mPosition.x < m_pPlayer->m_pSprite->mPosition.x + 100 && m_pPlayer->m_pEnemyFireSprite->mPosition.x > m_pPlayer->m_pSprite->mPosition.x - 30 && m_pPlayer->m_pEnemyFireSprite->mPosition.y <m_pPlayer->m_pSprite->mPosition.y + 50 && m_pPlayer->m_pEnemyFireSprite->mPosition.y > m_pPlayer->m_pSprite->mPosition.y - 50))
 				{
 					m_pPlayer->EnemyHit = false;
-					lives--;
-					if(lives == 0)
-						PostQuitMessage(0);
-
+					m_pPlayer->lives--;
+					if(m_pPlayer->lives == 0)
+						m_pPlayer->gameOver = 1;
+						
 				}
 
 				fTimer = SetTimer(m_hWnd, 1, 50, NULL);
@@ -179,7 +191,9 @@ int CGameApp::BeginGame()
 				if (!(m_pPlayer->m_pFireSprite->mPosition.x < m_pPlayer->q_pSprite->mPosition.x + 100 && m_pPlayer->m_pFireSprite->mPosition.x > m_pPlayer->q_pSprite->mPosition.x - 30 && m_pPlayer->m_pFireSprite->mPosition.y < m_pPlayer->q_pSprite->mPosition.y + 50 && m_pPlayer->m_pFireSprite->mPosition.y > m_pPlayer->q_pSprite->mPosition.y - 50))
 				{
 					m_pPlayer->PlayerHit = false;
-					points++;
+					m_pPlayer->points--;
+					if (m_pPlayer->points == 0)
+						m_pPlayer->gameOver = 1;
 				}
 				
 				
@@ -242,153 +256,243 @@ LRESULT CALLBACK CGameApp::StaticWndProc(HWND hWnd, UINT Message, WPARAM wParam,
 	return DefWindowProc( hWnd, Message, wParam, lParam );
 }
 
+
+void CGameApp::LoadGame() {
+	ifstream myfile;
+	myfile.open("data/save.txt");
+	myfile >> readable;
+	m_pPlayer->m_pSprite->mPosition.x = readable;
+	myfile >> readable;
+	m_pPlayer->m_pSprite->mPosition.y = readable;
+	myfile >> readable;
+	m_pPlayer->q_pSprite->mPosition.x = readable;
+	myfile >> readable;
+	m_pPlayer->q_pSprite->mPosition.x = readable;
+	myfile >> readable;
+	m_pPlayer->lives = readable;
+	myfile >> readable;
+	m_pPlayer->points = readable;
+
+
+}
+
+void CGameApp::SaveGame() {
+	ofstream myfile;
+	myfile.open("data/save.txt");
+	myfile << m_pPlayer->m_pSprite->mPosition.x << endl;
+	myfile << m_pPlayer->m_pSprite->mPosition.y << endl;
+	myfile << m_pPlayer->q_pSprite->mPosition.x << endl;
+	myfile << m_pPlayer->q_pSprite->mPosition.x << endl;
+	myfile << m_pPlayer->lives << endl;
+	myfile << m_pPlayer->points << endl;
+
+}
 //-----------------------------------------------------------------------------
 // Name : DisplayWndProc ()
 // Desc : The display devices internal WndProc function. All messages being
 //		passed to this function are relative to the window it owns.
 //-----------------------------------------------------------------------------
-LRESULT CGameApp::DisplayWndProc( HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam )
+LRESULT CGameApp::DisplayWndProc(HWND hWnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
-	static UINT			fTimer;	
+	static UINT			fTimer;
 
 	// Determine message type
 	switch (Message)
 	{
-		case WM_CREATE:
-			break;
-		
-		case WM_CLOSE:
+	case WM_CREATE:
+		break;
+
+	case WM_CLOSE:
+		PostQuitMessage(0);
+		break;
+
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		break;
+
+	case WM_SIZE:
+		if (wParam == SIZE_MINIMIZED)
+		{
+			// App is inactive
+			m_bActive = false;
+
+		} // App has been minimized
+		else
+		{
+			// App is active
+			m_bActive = true;
+
+			// Store new viewport sizes
+			m_nViewWidth = LOWORD(lParam);
+			m_nViewHeight = HIWORD(lParam);
+
+
+		} // End if !Minimized
+
+		break;
+
+	case WM_LBUTTONDOWN:
+		// Capture the mouse
+		SetCapture(m_hWnd);
+		GetCursorPos(&m_OldCursorPos);
+
+		break;
+
+	case WM_LBUTTONUP:
+		// Release the mouse
+		ReleaseCapture();
+		break;
+
+	case WM_KEYDOWN:
+		switch (wParam)
+		{
+		case VK_ESCAPE:
 			PostQuitMessage(0);
 			break;
-		
-		case WM_DESTROY:
-			PostQuitMessage(0);
+		case VK_RETURN:
+			fTimer = SetTimer(m_hWnd, 1, 50, NULL);
+			m_pPlayer->Explode();
 			break;
-		
-		case WM_SIZE:
-			if ( wParam == SIZE_MINIMIZED )
-			{
-				// App is inactive
-				m_bActive = false;
-			
-			} // App has been minimized
-			else
-			{
-				// App is active
-				m_bActive = true;
-
-				// Store new viewport sizes
-				m_nViewWidth  = LOWORD( lParam );
-				m_nViewHeight = HIWORD( lParam );
-		
-			
-			} // End if !Minimized
-
+		case 0x51:
+			fTimer = SetTimer(m_hWnd, 1, 50, NULL);
+			m_pPlayer->QExplode();
 			break;
 
-		case WM_LBUTTONDOWN:
-			// Capture the mouse
-			SetCapture( m_hWnd );
-			GetCursorPos( &m_OldCursorPos );
-
+		case VK_SPACE:
+			m_pPlayer->Fire();
 			break;
-
-		case WM_LBUTTONUP:
-			// Release the mouse
-			ReleaseCapture( );
+			//Z
+		case 0x5A:
+			m_pPlayer->EnemyFire();
 			break;
+			/*TO DO X
+			EnemyRotation	}*/
 
-		case WM_KEYDOWN:
-			switch (wParam)
-			{
-			case VK_ESCAPE:
-				PostQuitMessage(0);
-				break;
-			case VK_RETURN:
-				fTimer = SetTimer(m_hWnd, 1, 50, NULL);
-				m_pPlayer->Explode();
-				break;
-			case 0x51:
-				fTimer = SetTimer(m_hWnd, 1, 50, NULL);
-				m_pPlayer->QExplode();
-				break;
-
-			case VK_SPACE:
-				m_pPlayer->Fire();
-				break;
-			case 0x52:
-				m_pPlayer->aux = m_pPlayer->m_pSprite;
-				m_pPlayer->rotationDirection++;
-				if (m_pPlayer->rotationDirection == 5)
-					m_pPlayer->rotationDirection = 1;
-				switch (m_pPlayer->rotationDirection) {
-				case 1 :
-					m_pPlayer->m_pSprite = new Sprite("data/planeimgandmask.bmp", RGB(0xff, 0x00, 0xff));
-					m_pPlayer->m_pSprite->setBackBuffer(m_pBBuffer);
-					m_pPlayer->m_pSprite->mPosition.x = m_pPlayer->aux->mPosition.x;
-					m_pPlayer->m_pSprite->mPosition.y = m_pPlayer->aux->mPosition.y;
-					break;
-
-				case 2:
-					m_pPlayer->m_pSprite = new Sprite("data/planeimgandmaskright.bmp", RGB(0xff, 0x00, 0xff));
-					m_pPlayer->m_pSprite->setBackBuffer(m_pBBuffer);
-					m_pPlayer->m_pSprite->mPosition.x = m_pPlayer->aux->mPosition.x;
-					m_pPlayer->m_pSprite->mPosition.y = m_pPlayer->aux->mPosition.y;
-					break;
-
-				case 3:
-					m_pPlayer->m_pSprite = new Sprite("data/planeimgandmaskDown.bmp", RGB(0xff, 0x00, 0xff));
-					m_pPlayer->m_pSprite->setBackBuffer(m_pBBuffer);
-					m_pPlayer->m_pSprite->mPosition.x = m_pPlayer->aux->mPosition.x;
-					m_pPlayer->m_pSprite->mPosition.y = m_pPlayer->aux->mPosition.y;
-					break;
-				case 4:
-					m_pPlayer->m_pSprite = new Sprite("data/planeimgandmaskLeft.bmp", RGB(0xff, 0x00, 0xff));
-					m_pPlayer->m_pSprite->setBackBuffer(m_pBBuffer);
-					m_pPlayer->m_pSprite->mPosition.x = m_pPlayer->aux->mPosition.x;
-					m_pPlayer->m_pSprite->mPosition.y = m_pPlayer->aux->mPosition.y;
-					break;
-				default:	
-					m_pPlayer->m_pSprite = new Sprite("data/planeimgandmask.bmp", RGB(0xff, 0x00, 0xff));
-					m_pPlayer->m_pSprite->setBackBuffer(m_pBBuffer);
-					m_pPlayer->m_pSprite->mPosition.x = m_pPlayer->aux->mPosition.x;
-					m_pPlayer->m_pSprite->mPosition.y = m_pPlayer->aux->mPosition.y;
-					break;
-				}
-				
-				break;
-
-			}
-		
-	
-			break;
-
-		case WM_TIMER:
-			switch(wParam)
-			{
+		case 0x58: {
+			m_pPlayer->aux1 = m_pPlayer->q_pSprite;
+			m_pPlayer->enemyRotation++;
+			if (m_pPlayer->enemyRotation == 5)
+				m_pPlayer->enemyRotation = 1;
+			switch (m_pPlayer->enemyRotation) {
 			case 1:
-				if(!m_pPlayer->AdvanceExplosion()  )
-					KillTimer(m_hWnd, 1);
-				if (!m_pPlayer->QAdvanceExplosion())
-					KillTimer(m_hWnd, 1);
-				
+				m_pPlayer->q_pSprite = new Sprite("data/enemyplaneimgandmask.bmp", RGB(0xff, 0x00, 0xff));
+				m_pPlayer->q_pSprite->setBackBuffer(m_pBBuffer);
+				m_pPlayer->q_pSprite->mPosition.x = m_pPlayer->aux1->mPosition.x;
+				m_pPlayer->q_pSprite->mPosition.y = m_pPlayer->aux1->mPosition.y;
+				break;
 
-				
+			case 2:
+				m_pPlayer->q_pSprite = new Sprite("data/enemyplaneimgandmaskright.bmp", RGB(0xff, 0x00, 0xff));
+				m_pPlayer->q_pSprite->setBackBuffer(m_pBBuffer);
+				m_pPlayer->q_pSprite->mPosition.x = m_pPlayer->aux1->mPosition.x;
+				m_pPlayer->q_pSprite->mPosition.y = m_pPlayer->aux1->mPosition.y;
+				break;
 
-
+			case 3:
+				m_pPlayer->q_pSprite = new Sprite("data/planeimgandmask1.bmp", RGB(0xff, 0x00, 0xff));
+				m_pPlayer->q_pSprite->setBackBuffer(m_pBBuffer);
+				m_pPlayer->q_pSprite->mPosition.x = m_pPlayer->aux1->mPosition.x;
+				m_pPlayer->q_pSprite->mPosition.y = m_pPlayer->aux1->mPosition.y;
+				break;
+			case 4:
+				m_pPlayer->q_pSprite = new Sprite("data/enemyplaneimgandmaskLeft.bmp", RGB(0xff, 0x00, 0xff));
+				m_pPlayer->q_pSprite->setBackBuffer(m_pBBuffer);
+				m_pPlayer->q_pSprite->mPosition.x = m_pPlayer->aux1->mPosition.x;
+				m_pPlayer->q_pSprite->mPosition.y = m_pPlayer->aux1->mPosition.y;
+				break;
+			default:
+				m_pPlayer->q_pSprite = new Sprite("data/planeimgandmask1.bmp", RGB(0xff, 0x00, 0xff));
+				m_pPlayer->q_pSprite->setBackBuffer(m_pBBuffer);
+				m_pPlayer->q_pSprite->mPosition.x = m_pPlayer->aux1->mPosition.x;
+				m_pPlayer->q_pSprite->mPosition.y = m_pPlayer->aux1->mPosition.y;
+				break;
 			}
-			break;
 
-		case WM_COMMAND:
 			break;
+		}
+		case 0x4C:
+			LoadGame();
+			break;
+		case 0x49:
+			SaveGame();
+			break;
+		case 0x52:
+			m_pPlayer->aux = m_pPlayer->m_pSprite;
+			m_pPlayer->rotationDirection++;
+			if (m_pPlayer->rotationDirection == 5)
+				m_pPlayer->rotationDirection = 1;
+			switch (m_pPlayer->rotationDirection) {
+			case 1:
+				m_pPlayer->m_pSprite = new Sprite("data/planeimgandmask.bmp", RGB(0xff, 0x00, 0xff));
+				m_pPlayer->m_pSprite->setBackBuffer(m_pBBuffer);
+				m_pPlayer->m_pSprite->mPosition.x = m_pPlayer->aux->mPosition.x;
+				m_pPlayer->m_pSprite->mPosition.y = m_pPlayer->aux->mPosition.y;
+				break;
 
-	
-		default:
-			return DefWindowProc(hWnd, Message, wParam, lParam);
+			case 2:
+				m_pPlayer->m_pSprite = new Sprite("data/planeimgandmaskright.bmp", RGB(0xff, 0x00, 0xff));
+				m_pPlayer->m_pSprite->setBackBuffer(m_pBBuffer);
+				m_pPlayer->m_pSprite->mPosition.x = m_pPlayer->aux->mPosition.x;
+				m_pPlayer->m_pSprite->mPosition.y = m_pPlayer->aux->mPosition.y;
+				break;
+
+			case 3:
+				m_pPlayer->m_pSprite = new Sprite("data/planeimgandmaskDown.bmp", RGB(0xff, 0x00, 0xff));
+				m_pPlayer->m_pSprite->setBackBuffer(m_pBBuffer);
+				m_pPlayer->m_pSprite->mPosition.x = m_pPlayer->aux->mPosition.x;
+				m_pPlayer->m_pSprite->mPosition.y = m_pPlayer->aux->mPosition.y;
+				break;
+			case 4:
+				m_pPlayer->m_pSprite = new Sprite("data/planeimgandmaskLeft.bmp", RGB(0xff, 0x00, 0xff));
+				m_pPlayer->m_pSprite->setBackBuffer(m_pBBuffer);
+				m_pPlayer->m_pSprite->mPosition.x = m_pPlayer->aux->mPosition.x;
+				m_pPlayer->m_pSprite->mPosition.y = m_pPlayer->aux->mPosition.y;
+				break;
+			default:
+				m_pPlayer->m_pSprite = new Sprite("data/planeimgandmask.bmp", RGB(0xff, 0x00, 0xff));
+				m_pPlayer->m_pSprite->setBackBuffer(m_pBBuffer);
+				m_pPlayer->m_pSprite->mPosition.x = m_pPlayer->aux->mPosition.x;
+				m_pPlayer->m_pSprite->mPosition.y = m_pPlayer->aux->mPosition.y;
+				break;
+			}
+
+			break;
+			case 0x4E:
+				m_pPlayer->gameOver = 0;
+				SetupGameState();
+				break;
+		}
+
+
+		break;
+
+	case WM_TIMER:
+		switch (wParam)
+		{
+		case 1:
+			if (!m_pPlayer->AdvanceExplosion())
+				KillTimer(m_hWnd, 1);
+			if (!m_pPlayer->QAdvanceExplosion())
+				KillTimer(m_hWnd, 1);
+
+
+
+
+
+		}
+		break;
+
+	case WM_COMMAND:
+		break;
+
+
+	default:
+		return DefWindowProc(hWnd, Message, wParam, lParam);
 
 	} // End Message Switch
 
 }
+
 
 //-----------------------------------------------------------------------------
 // Name : BuildObjects ()
@@ -398,9 +502,9 @@ bool CGameApp::BuildObjects()
 {
 	m_pBBuffer = new BackBuffer(m_hWnd, m_nViewWidth, m_nViewHeight);
 	m_pPlayer = new CPlayer(m_pBBuffer);
-	m_pPlayer2 = new CPlayer(m_pBBuffer);
+
 	//m_hBMP = (HBITMAP)LoadImage(g_hInst, szFileName, IMAGE_BITMAP, 0, 0, LR_CREATEDIBSECTION | LR_LOADFROMFILE);
-	if(!m_imgBackground.LoadBitmapFromFile("data/background.bmp", GetDC(m_hWnd) ))
+	if(!m_imgBackground.LoadBitmapFromFile("data/background.bmp", GetDC(m_hWnd) ) || !m_imgBackground1.LoadBitmapFromFile("data/background.bmp", GetDC(m_hWnd)) )
 		//return false;
 
 	// Success!
@@ -414,6 +518,17 @@ bool CGameApp::BuildObjects()
 void CGameApp::SetupGameState()
 {
 	m_pPlayer->Position() = Vec2(100, 400);
+	m_pPlayer->q_pSprite->mPosition.x = 700;
+	m_pPlayer->q_pSprite->mPosition.y = 100;
+	m_pPlayer->lives = 3;
+	m_pPlayer->points = 3;
+	m_pPlayer->rotationDirection = 1;
+	m_pPlayer->enemyRotation = 3;
+	m_pPlayer->gameOver1->mPosition.x = 750;
+	m_pPlayer->gameOver1->mPosition.y = 350;
+	m_pPlayer->gameOver2->mPosition.x = 750;
+	m_pPlayer->gameOver2->mPosition.y = 350;
+
 }
 
 //-----------------------------------------------------------------------------
@@ -478,6 +593,8 @@ void CGameApp::ProcessInput( )
 {
 	static UCHAR pKeyBuffer[ 256 ];
 	ULONG		Direction = 0;
+	ULONG		DirectionEnemy = 0;
+
 	POINT		CursorPos;
 	float		X = 0.0f, Y = 0.0f;
 
@@ -502,11 +619,28 @@ void CGameApp::ProcessInput( )
 		Direction |= CPlayer::DIR_RIGHT;
 		
 	}
+	if (pKeyBuffer[0x57] & 0xF0) {
+		DirectionEnemy |= CPlayer::DIR_W;
+
+
+	}
+	if (pKeyBuffer[0x53] & 0xF0) {
+		DirectionEnemy |= CPlayer::DIR_S;
+
+	}
+	if (pKeyBuffer[0x44] & 0xF0) {
+		DirectionEnemy |= CPlayer::DIR_D;
+
+	}
+	if (pKeyBuffer[0x41] & 0xF0) {
+		DirectionEnemy |= CPlayer::DIR_A;
+
+	}
 
 	
 	// Move the player
 	m_pPlayer->Move(Direction);
-
+	m_pPlayer->MoveEnemy(DirectionEnemy);
 
 	// Now process the mouse (if the button is pressed)
 	if ( GetCapture() == m_hWnd )
@@ -540,23 +674,25 @@ void CGameApp::DrawObjects()
 {
 	m_pBBuffer->reset();
 
-	m_imgBackground.Paint(m_pBBuffer->getDC(), 0, 0);
-
-	m_pPlayer->Draw();
-	HFONT hFont, eFont;
-	hFont = CreateFont(36,20,100,0,FW_DONTCARE,FALSE,TRUE,FALSE,DEFAULT_CHARSET,OUT_OUTLINE_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY, VARIABLE_PITCH,TEXT("Impact"));
-	SelectObject(m_pBBuffer->getDC(), hFont);
-
-	eFont= CreateFont(36,20,-100,0,FW_DONTCARE,FALSE,TRUE,FALSE,DEFAULT_CHARSET,OUT_OUTLINE_PRECIS,CLIP_DEFAULT_PRECIS,CLEARTYPE_QUALITY, VARIABLE_PITCH,TEXT("Impact"));
-	sprintf(score, "%d", points);
-
-	TextOut(m_pBBuffer->getDC(), 0, 50, "SCORE" ,6);
-	TextOut(m_pBBuffer->getDC(), 10, 100, score, strlen(score));
-
-	SelectObject(m_pBBuffer->getDC(), eFont);
-	sprintf(life, "%d", lives);
-	TextOut(m_pBBuffer->getDC(), GetSystemMetrics(SM_CXSCREEN) - 200, 50, "Lives", 5);
-	TextOut(m_pBBuffer->getDC(), GetSystemMetrics(SM_CXSCREEN) - 190, 100, life, strlen(life));
+	m_imgBackground.Paint(m_pBBuffer->getDC(), 0,y_bg1);
+	m_imgBackground1.Paint(m_pBBuffer->getDC(), 0, y_bg2);
 	
+	m_pPlayer->Draw();
+	if (!m_pPlayer->gameOver) {
+		HFONT hFont, eFont;
+		hFont = CreateFont(36, 20, 100, 0, FW_DONTCARE, FALSE, TRUE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, TEXT("Times New Roman"));
+		SelectObject(m_pBBuffer->getDC(), hFont);
+
+		eFont = CreateFont(36, 20, -100, 0, FW_DONTCARE, FALSE, TRUE, FALSE, DEFAULT_CHARSET, OUT_OUTLINE_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, VARIABLE_PITCH, TEXT("Times New Roman"));
+		sprintf(score, "%d", m_pPlayer->points);
+
+		TextOut(m_pBBuffer->getDC(), 0, 50, "Player1", 7);
+		TextOut(m_pBBuffer->getDC(), 10, 100, score, strlen(score));
+
+		SelectObject(m_pBBuffer->getDC(), eFont);
+		sprintf(life, "%d", m_pPlayer->lives);
+		TextOut(m_pBBuffer->getDC(), GetSystemMetrics(SM_CXSCREEN) - 200, 50, "Player2", 7);
+		TextOut(m_pBBuffer->getDC(), GetSystemMetrics(SM_CXSCREEN) - 85, 120, life, strlen(life));
+	}
 	m_pBBuffer->present();
 }
