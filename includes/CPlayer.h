@@ -39,9 +39,14 @@ public:
 		DIR_FORWARD	 = 1, 
 		DIR_BACKWARD	= 2, 
 		DIR_LEFT		= 4, 
-		DIR_RIGHT	   = 8, 
+		DIR_RIGHT	   = 8,
+		DIR_W = 2,
+		DIR_A = 1,
+		DIR_S = 4,
+		DIR_D = 8,
+		
 	};
-
+	
 	enum ESpeedStates
 	{
 		SPEED_START,
@@ -60,6 +65,7 @@ public:
 	void					Update( float dt );
 	void					Draw();
 	void					Move(ULONG ulDirection);
+	void					MoveEnemy(ULONG ulDirection);
 	void					Fire();
 	void					EnemyFire();
 	Vec2&					Position();
@@ -73,15 +79,19 @@ public:
 
 	AnimatedSprite*	 m_pEnemyLivesSprite;
 	int						m_iEnemyLifeFrame = 0;
-
-	int rotationDirection = 1;
+	int lives;
+	int points;
+	int rotationDirection;
+	int enemyRotation;
 	bool EnemyHit = false;
 	bool PlayerHit = false;
 	bool col = false;
 	bool left;
 	int count = 0;
 	bool  d = 0; bool l = 0;bool  r = 0;
+	bool  d1 = 0; bool l1 = 0; bool  r1 = 0; bool u1 = 0;
 	bool u = 0;
+	bool gameOver = 0;
 	void					Explode();
 	bool					AdvanceExplosion();
 	void					QExplode();
@@ -91,7 +101,10 @@ public:
 	void CollisionDetection();
 	Vec2 *gBulletList;
 	Sprite*					m_pSprite;
+	Sprite*					gameOver1;
+	Sprite*					gameOver2;
 	Sprite*					aux;
+	Sprite*					aux1;
 	Sprite*					q_pSprite;
 	AnimatedSprite*	 m_pFireSprite;
 	AnimatedSprite*	 m_pEnemyFireSprite;
