@@ -3,7 +3,7 @@
 //
 // Desc: Game Application class, this is the central hub for all app processing
 //
-// Original design by Adam Hoult & Gary Simmons. Modified by Mihai Popescu.
+// Original design by Adam Hoult & Gary Simmons. Modified by Gabriela Dinu.
 //-----------------------------------------------------------------------------
 #include <iostream>
 #include <fstream>
