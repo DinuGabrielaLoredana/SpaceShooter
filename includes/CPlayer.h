@@ -4,7 +4,7 @@
 // Desc: This file stores the player object class. This class performs tasks
 //	   such as player movement, some minor physics as well as rendering.
 //
-// Original design by Adam Hoult & Gary Simmons. Modified by Mihai Popescu.
+// Original design by Adam Hoult & Gary Simmons. Modified by Gabriela Dinu.
 //-----------------------------------------------------------------------------
 
 #ifndef _CPLAYER_H_
